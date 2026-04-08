@@ -12,6 +12,8 @@ keywords = ["grocery", "price-comparison", "flipp", "mcp", "ai", "shopping"]
 dependencies = [
     "anthropic",
     "mcp",
+    "fastapi",
+    "uvicorn[standard]",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +24,8 @@ dev = ["build", "twine"]
 grocery-compare = "grocery_price_comparator.cli:main"
 # MCP server: expose tools to Claude / any MCP-compatible AI
 grocery-mcp = "grocery_price_comparator.server:main"
+# REST API: backend for the mobile app
+grocery-api = "grocery_price_comparator.api:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

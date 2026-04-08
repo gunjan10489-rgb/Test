@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Grocery Price Comparator",
+    "slug": "grocery-price-comparator",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#2E7D32"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.grocery.pricecomparator"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2E7D32"
+      },
+      "package": "com.grocery.pricecomparator"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
