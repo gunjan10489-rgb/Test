@@ -8,6 +8,7 @@ and tell you which store gives the cheapest total bill.
 
 import sys
 from flipp_api import fetch_prices_for_list, build_store_totals, get_flyers
+from grocery_comparator import compare_prices, get_available_items, get_per_item_cheapest
 
 SEPARATOR = "-" * 65
 
@@ -142,6 +143,62 @@ def display_results(
 
 
 # ---------------------------------------------------------------------------
+# Local fallback display (uses stores_data.json when API unreachable)
+# ---------------------------------------------------------------------------
+
+def display_local_fallback(comparison: dict, grocery_list: list[str]):
+    results = comparison["results"]
+    cheapest = comparison["cheapest"]
+    not_found = comparison["not_found_anywhere"]
+
+    print("  [Using local sample data — connect to internet for live Flipp prices]\n")
+
+    if not_found:
+        print(f"  Items not in local DB: {', '.join(i.title() for i in not_found)}\n")
+
+    print(f"{SEPARATOR}")
+    print("  TOTAL BILL COMPARISON  (local store database)")
+    print(SEPARATOR)
+    print(f"  {'#':<4} {'Store':<22} {'Location':<15} {'Total':>9}  {'Missing'}")
+    print("  " + "-" * 60)
+    for rank, r in enumerate(results, 1):
+        missing_label = ", ".join(i.title() for i in r["missing_items"]) if r["missing_items"] else "none"
+        marker = " <-- CHEAPEST" if rank == 1 else ""
+        print(f"  {rank:<4} {r['store']:<22} {r['location']:<15} ${r['total']:>8.2f}  {missing_label}{marker}")
+    print(SEPARATOR)
+
+    print(f"\n  WINNER: {cheapest['store']} ({cheapest['location']})")
+    print(f"  Your estimated total bill: ${cheapest['total']:.2f}\n")
+
+    print(f"  Itemised breakdown at {cheapest['store']}:")
+    print(f"  {'Item':<26} {'Price':>8}")
+    print("  " + "-" * 36)
+    for item in grocery_list:
+        price = cheapest["found_items"].get(item)
+        if price is not None:
+            print(f"  {item.title():<26} ${price:>7.2f}")
+        else:
+            print(f"  {item.title():<26}  NOT AVAILABLE")
+    print("  " + "-" * 36)
+    print(f"  {'TOTAL':<26} ${cheapest['total']:>7.2f}\n")
+
+    # Per-item cheapest from local DB
+    per_item = get_per_item_cheapest(grocery_list)
+    print(f"{SEPARATOR}")
+    print("  CHEAPEST STORE PER ITEM  (local data)")
+    print(SEPARATOR)
+    print(f"  {'Item':<26} {'Store':<22} {'Price':>8}")
+    print("  " + "-" * 60)
+    for item in grocery_list:
+        info = per_item.get(item)
+        if info:
+            print(f"  {item.title():<26} {info['store']:<22} ${info['price']:>7.2f}")
+        else:
+            print(f"  {item.title():<26} {'Not in local database':<22}")
+    print(SEPARATOR + "\n")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -169,15 +226,24 @@ def main():
             )
             print("  (This may take a few seconds)\n")
 
+            flipp_ok = True
             try:
                 prices_by_item = fetch_prices_for_list(grocery_list, postal_code)
+                store_totals = build_store_totals(prices_by_item, grocery_list)
+                # If the API returned zero results for every item, treat as unreachable
+                if not store_totals:
+                    raise RuntimeError("No results returned from Flipp (API may be unreachable)")
             except Exception as exc:
-                print(f"\n  Error contacting Flipp API: {exc}")
-                print("  Please check your internet connection and try again.\n")
-                continue
+                flipp_ok = False
+                print(f"  Could not reach Flipp API: {exc}")
+                print("  Falling back to local store price database...\n")
 
-            store_totals = build_store_totals(prices_by_item, grocery_list)
-            display_results(store_totals, grocery_list, prices_by_item)
+            if flipp_ok:
+                display_results(store_totals, grocery_list, prices_by_item)
+            else:
+                # Fallback: use local stores_data.json
+                comparison = compare_prices(grocery_list)
+                display_local_fallback(comparison, grocery_list)
 
             again = input("  Compare another list? (yes/no): ").strip().lower()
             if again not in ("yes", "y"):
