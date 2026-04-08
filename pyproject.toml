@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "grocery-price-comparator"
+version = "1.0.0"
+description = "Compare grocery prices across local stores using live Flipp flyer data, with an AI-powered shopping advisor"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = ["grocery", "price-comparison", "flipp", "mcp", "ai", "shopping"]
+dependencies = [
+    "anthropic",
+    "mcp",
+]
+
+[project.optional-dependencies]
+dev = ["build", "twine"]
+
+[project.scripts]
+# CLI: run the interactive terminal app
+grocery-compare = "grocery_price_comparator.cli:main"
+# MCP server: expose tools to Claude / any MCP-compatible AI
+grocery-mcp = "grocery_price_comparator.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["grocery_price_comparator*"]
+
+[tool.setuptools.package-data]
+grocery_price_comparator = ["data/*.json"]

@@ -1,30 +1,18 @@
 """
 Grocery Agent — Internal LLM-powered agent
 ============================================
-Uses the Claude API (claude-opus-4-6) as an internal agent inside the
-grocery MCP server. The agent can:
-
-  1. Parse natural language requests into searchable grocery items
-     e.g. "ingredients for pasta night" → ["pasta", "tomato sauce", "cheese"]
-
-  2. Decide whether to use live Flipp prices or the local offline database
-
-  3. Analyse the price results and give smart, personalised recommendations
-     e.g. "Split your shop: get dairy at ValueGrocer, meat at FreshMart — saves $4.20"
+Uses the Claude API (claude-opus-4-6) as an internal agent.
+Understands natural language requests, normalises grocery items,
+fetches live/local prices, and gives personalised recommendations.
 
 Requires:  ANTHROPIC_API_KEY environment variable
-Install:   pip install anthropic
 """
 
 import json
 import os
 import anthropic
-from flipp_api import fetch_prices_for_list, build_store_totals
-from grocery_comparator import compare_prices
-
-# ---------------------------------------------------------------------------
-# System prompt — shapes how the internal agent thinks and responds
-# ---------------------------------------------------------------------------
+from .flipp_api import fetch_prices_for_list, build_store_totals
+from .comparator import compare_prices
 
 SYSTEM_PROMPT = """You are an expert grocery shopping assistant with access to
 live store price data. Your job is to help users find the cheapest place to buy
@@ -48,10 +36,6 @@ When given a shopping request you must:
    - Keep the response concise — bullet points are fine.
 
 Always be friendly, practical, and focused on saving the user money."""
-
-# ---------------------------------------------------------------------------
-# Tool schemas for the internal agent
-# ---------------------------------------------------------------------------
 
 AGENT_TOOLS = [
     {
@@ -96,10 +80,6 @@ AGENT_TOOLS = [
     },
 ]
 
-
-# ---------------------------------------------------------------------------
-# Tool execution
-# ---------------------------------------------------------------------------
 
 def _run_fetch_live(items: list[str], postal_code: str) -> str:
     try:
@@ -157,10 +137,6 @@ def _execute_tool(name: str, tool_input: dict, postal_code: str) -> str:
     return json.dumps({"error": f"Unknown tool: {name}"})
 
 
-# ---------------------------------------------------------------------------
-# Main agent entry point
-# ---------------------------------------------------------------------------
-
 def run_grocery_agent(postal_code: str, user_request: str) -> str:
     """
     Run the internal Claude agent for a grocery shopping request.
@@ -192,7 +168,6 @@ def run_grocery_agent(postal_code: str, user_request: str) -> str:
         }
     ]
 
-    # Agentic loop — keep going until Claude stops calling tools
     while True:
         response = client.messages.create(
             model="claude-opus-4-6",
@@ -204,17 +179,13 @@ def run_grocery_agent(postal_code: str, user_request: str) -> str:
         )
 
         if response.stop_reason == "end_turn":
-            # Return Claude's final text recommendation
             return next(
                 (block.text for block in response.content if block.type == "text"),
                 "No response generated.",
             )
 
         if response.stop_reason == "tool_use":
-            # Append assistant turn (includes tool_use blocks)
             messages.append({"role": "assistant", "content": response.content})
-
-            # Execute each tool call and collect results
             tool_results = []
             for block in response.content:
                 if block.type == "tool_use":
@@ -226,12 +197,8 @@ def run_grocery_agent(postal_code: str, user_request: str) -> str:
                             "content": result_str,
                         }
                     )
-
-            # Feed results back to Claude
             messages.append({"role": "user", "content": tool_results})
-
         else:
-            # Unexpected stop reason
             break
 
     return "Agent stopped unexpectedly. Please try again."

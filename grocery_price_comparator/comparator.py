@@ -2,12 +2,11 @@ import json
 import os
 from typing import Optional
 
-
-DATA_FILE = os.path.join(os.path.dirname(__file__), "stores_data.json")
+DATA_FILE = os.path.join(os.path.dirname(__file__), "data", "stores_data.json")
 
 
 def load_stores() -> list[dict]:
-    """Load store price data from JSON file."""
+    """Load store price data from the bundled JSON file."""
     with open(DATA_FILE, "r") as f:
         data = json.load(f)
     return data["stores"]
@@ -35,7 +34,6 @@ def compare_prices(grocery_list: list[str]) -> dict:
     stores = load_stores()
     normalized_list = [item.strip().lower() for item in grocery_list]
 
-    # Items not found in any store
     all_store_items = set()
     for store in stores:
         all_store_items.update(k.lower() for k in store["prices"])

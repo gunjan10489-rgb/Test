@@ -73,7 +73,6 @@ def _parse_price(item: dict) -> Optional[float]:
             return float(price)
         except (TypeError, ValueError):
             pass
-    # Sometimes price is embedded in display_name or price_text
     for key in ("sale_price", "was_price", "price"):
         val = item.get(key)
         if val is not None:
@@ -109,7 +108,6 @@ def fetch_prices_for_list(
     for item in grocery_list:
         raw_items = search_item(item, postal_code, locale)
 
-        # Group by merchant, keep only the cheapest offer per merchant
         merchant_best: dict[str, dict] = {}
         for flipp_item in raw_items:
             merchant = flipp_item.get("merchant_name") or flipp_item.get("merchant", "")
@@ -127,7 +125,7 @@ def fetch_prices_for_list(
                 }
 
         results[item] = sorted(merchant_best.values(), key=lambda x: x["price"])
-        time.sleep(delay)  # be polite to the API
+        time.sleep(delay)
 
     return results
 
@@ -137,24 +135,9 @@ def build_store_totals(
     grocery_list: list[str],
 ) -> list[dict]:
     """
-    Given per-item cheapest prices per merchant, compute what the
-    total bill would be if you bought *everything* at each store.
-
-    Only stores that carry at least one item are included.
-    Items missing from a store are noted but not added to the total.
-
-    Returns a list of store dicts sorted by total (ascending):
-      [
-        {
-          "store": "Walmart",
-          "total": 18.45,
-          "found": {"milk": 2.99, "bread": 1.49, ...},
-          "missing": ["eggs"],
-        },
-        ...
-      ]
+    Compute total bill per store across the full grocery list.
+    Returns a list sorted by total (ascending).
     """
-    # Collect all merchant names
     all_merchants: set[str] = set()
     for offers in prices_by_item.values():
         for o in offers:
@@ -176,7 +159,6 @@ def build_store_totals(
             else:
                 store_data[merchant]["missing"].append(item)
 
-    # Round totals
     for sd in store_data.values():
         sd["total"] = round(sd["total"], 2)
 
