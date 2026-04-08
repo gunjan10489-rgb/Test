@@ -20,12 +20,19 @@ Claude Desktop config  (~/.claude/claude_desktop_config.json):
 
 Then just tell Claude:
     "Compare prices for milk, eggs, and bread near postal code 10001"
+
+Smart advisor (LLM-powered):
+    "I want to make pasta bolognese and a salad for 4 people near 10001"
+    → The internal Claude agent figures out the ingredients, fetches live
+      prices, and recommends the cheapest store with savings tips.
+    Requires: ANTHROPIC_API_KEY environment variable
 """
 
 import json
 from mcp.server.fastmcp import FastMCP
 from flipp_api import get_flyers, fetch_prices_for_list, build_store_totals
 from grocery_comparator import compare_prices, get_available_items, get_per_item_cheapest
+from grocery_agent import run_grocery_agent
 
 mcp = FastMCP("Grocery Price Comparator")
 
@@ -261,6 +268,45 @@ def list_available_items() -> str:
         lines.append(f"  {i:2}. {item.title()}")
     lines.append(f"\nTotal: {len(items)} items")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Tool 6: Smart grocery advisor (LLM-powered internal agent)
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def smart_grocery_advisor(postal_code: str, request: str) -> str:
+    """
+    AI-powered grocery shopping advisor. Uses an internal Claude agent
+    (claude-opus-4-6) to understand your natural language request, figure out
+    what items you need, fetch live prices from stores near you, and give
+    personalised money-saving recommendations.
+
+    Unlike the other tools, you do NOT need to list individual items —
+    just describe what you need in plain English.
+
+    Examples:
+      - "ingredients for spaghetti bolognese for 4 people"
+      - "weekly breakfast and lunch staples"
+      - "BBQ party food for 10 guests"
+      - "healthy snacks and smoothie ingredients"
+
+    Requires the ANTHROPIC_API_KEY environment variable to be set.
+
+    Args:
+        postal_code: Your postal or ZIP code (e.g. "10001" or "M5V 3L9").
+        request: Natural language description of what you want to buy.
+
+    Returns:
+        A personalised recommendation: cheapest store, total bill, savings tips,
+        and a suggested shopping plan.
+    """
+    if not postal_code.strip():
+        return "Please provide your postal or ZIP code."
+    if not request.strip():
+        return "Please describe what you want to buy."
+
+    return run_grocery_agent(postal_code.strip(), request.strip())
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,9 @@
-# MCP server (exposes grocery tools to Claude and other AI agents)
+# MCP server — exposes grocery tools to Claude and other AI agents
 mcp
+
+# Anthropic SDK — powers the internal LLM agent (smart_grocery_advisor)
+# Requires ANTHROPIC_API_KEY environment variable
+anthropic
 
 # All other modules (flipp_api, grocery_comparator, main) use only
 # Python standard library: urllib.request, urllib.parse, json, time
