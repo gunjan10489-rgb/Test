@@ -1,3 +1,5 @@
-# No third-party packages required.
-# The Flipp API client uses only Python standard library modules:
-#   urllib.request, urllib.parse, json, time
+# MCP server (exposes grocery tools to Claude and other AI agents)
+mcp
+
+# All other modules (flipp_api, grocery_comparator, main) use only
+# Python standard library: urllib.request, urllib.parse, json, time
